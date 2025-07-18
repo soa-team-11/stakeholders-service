@@ -6,13 +6,14 @@ import (
 	mg "stakeholder-service/internal/providers/mongo"
 	"stakeholder-service/models"
 
+	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type ProfileRepo interface {
 	Create(profile models.Profile) (*models.Profile, error)
-	GetByUserId(userId string) (*models.Profile, error)
+	GetByUserId(userId uuid.UUID) (*models.Profile, error)
 	// Add more if needed: Update, Delete, etc.
 }
 
@@ -34,7 +35,7 @@ func (r *ProfileRepoImpl) Create(profile models.Profile) (*models.Profile, error
 	return &profile, nil
 }
 
-func (r *ProfileRepoImpl) GetByUserId(userId string) (*models.Profile, error) {
+func (r *ProfileRepoImpl) GetByUserId(userId uuid.UUID) (*models.Profile, error) {
 	var profile models.Profile
 	err := r.collection.FindOne(context.Background(), bson.M{"user_id": userId}).Decode(&profile)
 	if err != nil {

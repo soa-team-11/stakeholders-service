@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/google/uuid"
 
 	"stakeholder-service/models"
 	"stakeholder-service/services"
@@ -22,6 +23,7 @@ func Routes() chi.Router {
 	r.Use(middleware.AllowContentType("application/json"))
 
 	r.Post("/", HandleCreate)
+	r.Get("/getByUserId", HandleGetByUserId)
 
 	return r
 }
@@ -59,4 +61,26 @@ func HandleCreate(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusCreated)
 	w.Write(createdProfile.ToJSON())
+}
+
+func HandleGetByUserId(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	userIDParam := r.URL.Query().Get("user_id")
+	userID, err := uuid.Parse(userIDParam)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, `{"message":"invalid user_id format"}`)
+		return
+	}
+
+	profile, err := profileService.GetByUserId(userID)
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(w, `{"message":"profile not found"}`)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(profile.ToJSON())
 }
