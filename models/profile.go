@@ -7,11 +7,12 @@ import (
 )
 
 type Profile struct {
-	UserID  uuid.UUID `json:"user_id" bson:"user_id"`
-	Name    string    `json:"name" bson:"name"`
-	Surname string    `json:"surname" bson:"surname"`
-	Bio     string    `json:"bio" bson:"bio"`
-	Motto   string    `json:"motto" bson:"motto"`
+	UserID   uuid.UUID `json:"user_id" bson:"user_id"`
+	Name     string    `json:"name" bson:"name"`
+	Surname  string    `json:"surname" bson:"surname"`
+	Bio      string    `json:"bio" bson:"bio"`
+	Motto    string    `json:"motto" bson:"motto"`
+	ImageURL string    `json:"image_url" bson:"image_url"`
 }
 
 func (p *Profile) ToJSONString() string {

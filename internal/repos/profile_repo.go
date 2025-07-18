@@ -48,10 +48,11 @@ func (r *ProfileRepoImpl) Update(profile models.Profile) (*models.Profile, error
 	filter := bson.M{"user_id": profile.UserID}
 
 	updateDoc := bson.M{
-		"name":    profile.Name,
-		"surname": profile.Surname,
-		"bio":     profile.Bio,
-		"motto":   profile.Motto,
+		"name":      profile.Name,
+		"surname":   profile.Surname,
+		"bio":       profile.Bio,
+		"motto":     profile.Motto,
+		"image_url": profile.ImageURL,
 	}
 
 	update := bson.M{"$set": updateDoc}

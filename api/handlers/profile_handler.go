@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/google/uuid"
 
+	"stakeholder-service/internal/providers/cloudinary"
 	"stakeholder-service/models"
 	"stakeholder-service/services"
 )
@@ -20,7 +21,7 @@ var (
 
 func Routes() chi.Router {
 	r := chi.NewRouter()
-	r.Use(middleware.AllowContentType("application/json"))
+	r.Use(middleware.AllowContentType("application/json", "multipart/form-data"))
 
 	r.Post("/", HandleCreate)
 	r.Put("/", HandleUpdate)
@@ -32,34 +33,43 @@ func Routes() chi.Router {
 func HandleUpdate(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	b, err := io.ReadAll(r.Body)
-	defer r.Body.Close()
-
+	err := r.ParseMultipartForm(10 << 20) // 10MB
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, `{"message":"%s"}`, err.Error())
+		http.Error(w, fmt.Sprintf(`{"message":"%s"}`, err.Error()), http.StatusBadRequest)
 		return
 	}
 
+	jsonData := r.FormValue("profile")
 	var profile models.Profile
-	err = json.Unmarshal(b, &profile)
-
+	err = json.Unmarshal([]byte(jsonData), &profile)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, `{"message":"%s"}`, err.Error())
+		http.Error(w, fmt.Sprintf(`{"message":"%s"}`, err.Error()), http.StatusBadRequest)
 		return
 	}
 
-	createdProfile, err := profileService.Update(profile)
+	file, header, err := r.FormFile("image")
+	if err == nil {
+		defer file.Close()
 
+		imageURL, err := cloudinary.UploadImage(file)
+		if err != nil {
+			http.Error(w, fmt.Sprintf(`{"message":"%s"}`, err.Error()), http.StatusInternalServerError)
+			return
+		}
+		fmt.Printf("Uploaded file: %s\n", header.Filename)
+		fmt.Println(imageURL)
+
+		profile.ImageURL = imageURL
+	}
+
+	updatedProfile, err := profileService.Update(profile)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, `{"message":"%s"}`, err.Error())
+		http.Error(w, fmt.Sprintf(`{"message":"%s"}`, err.Error()), http.StatusBadRequest)
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
-	w.Write(createdProfile.ToJSON())
+	w.WriteHeader(http.StatusOK)
+	w.Write(updatedProfile.ToJSON())
 }
 
 func HandleCreate(w http.ResponseWriter, r *http.Request) {
