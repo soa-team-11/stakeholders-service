@@ -1,17 +1,18 @@
 package main
 
 import (
-	"fmt"
-	"log"
 	"net/http"
+	"stakeholder-service/api/routers"
+	"stakeholder-service/utils"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func main() {
-	http.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("✅ /test endpoint was called!")
-		w.Write([]byte("Hello from Stakeholder Service"))
-	})
+	router := routers.Router()
 
-	fmt.Println("🚀 Server running at http://localhost:8080")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	port := utils.Getenv("PORT", "8080")
+
+	log.Infof("Running services on PORT %s", port)
+	log.Fatal(http.ListenAndServe(":"+port, router))
 }
