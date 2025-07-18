@@ -14,7 +14,7 @@ import (
 type ProfileRepo interface {
 	Create(profile models.Profile) (*models.Profile, error)
 	GetByUserId(userId uuid.UUID) (*models.Profile, error)
-	// Add more if needed: Update, Delete, etc.
+	Update(profile models.Profile) (*models.Profile, error)
 }
 
 type ProfileRepoImpl struct {
@@ -42,4 +42,24 @@ func (r *ProfileRepoImpl) GetByUserId(userId uuid.UUID) (*models.Profile, error)
 		return nil, err
 	}
 	return &profile, nil
+}
+
+func (r *ProfileRepoImpl) Update(profile models.Profile) (*models.Profile, error) {
+	filter := bson.M{"user_id": profile.UserID}
+
+	updateDoc := bson.M{
+		"name":    profile.Name,
+		"surname": profile.Surname,
+		"bio":     profile.Bio,
+		"motto":   profile.Motto,
+	}
+
+	update := bson.M{"$set": updateDoc}
+
+	_, err := r.collection.UpdateOne(context.Background(), filter, update)
+	if err != nil {
+		return nil, err
+	}
+
+	return r.GetByUserId(profile.UserID)
 }

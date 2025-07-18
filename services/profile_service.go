@@ -42,3 +42,16 @@ func (s *ProfileService) GetByUserId(UserId uuid.UUID) (*models.Profile, error) 
 
 	return profile, nil
 }
+
+func (s *ProfileService) Update(profile models.Profile) (*models.Profile, error) {
+	if profile.UserID == uuid.Nil {
+		return nil, fmt.Errorf("UserID cannot be nil")
+	}
+
+	updatedProfile, err := s.profileRepo.Update(profile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update profile: %w", err)
+	}
+
+	return updatedProfile, nil
+}
