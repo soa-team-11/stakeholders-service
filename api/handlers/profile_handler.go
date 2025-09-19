@@ -26,6 +26,7 @@ func Routes() chi.Router {
 	r.Post("/", HandleCreate)
 	r.Put("/", HandleUpdate)
 	r.Get("/getByUserId", HandleGetByUserId)
+	r.Get("/getRecommendationsByUserId", HandleGetRecommendationsByUserId)
 
 	return r
 }
@@ -125,4 +126,34 @@ func HandleGetByUserId(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	w.Write(profile.ToJSON())
+}
+
+func HandleGetRecommendationsByUserId(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	userIDParam := r.URL.Query().Get("user_id")
+	userID, err := uuid.Parse(userIDParam)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, `{"message":"invalid user_id format"}`)
+		return
+	}
+
+	profiles, err := profileService.GetRecommendations(userID)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"message":"failed to get recommendations: %s"}`, err.Error())
+		return
+	}
+
+	// Convert profiles to JSON
+	resp, err := json.Marshal(profiles)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"message":"failed to marshal response: %s"}`, err.Error())
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(resp)
 }
