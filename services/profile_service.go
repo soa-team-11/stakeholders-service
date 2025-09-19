@@ -48,6 +48,15 @@ func (s *ProfileService) Update(profile models.Profile) (*models.Profile, error)
 		return nil, fmt.Errorf("UserID cannot be nil")
 	}
 
+	existing, err := s.profileRepo.GetByUserId(profile.UserID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load existing profile: %w", err)
+	}
+
+	if profile.ImageURL == "" {
+		profile.ImageURL = existing.ImageURL
+	}
+
 	updatedProfile, err := s.profileRepo.Update(profile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update profile: %w", err)
