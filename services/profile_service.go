@@ -64,3 +64,16 @@ func (s *ProfileService) Update(profile models.Profile) (*models.Profile, error)
 
 	return updatedProfile, nil
 }
+
+func (s *ProfileService) GetRecommendations(userId uuid.UUID) ([]models.Profile, error) {
+	if userId == uuid.Nil {
+		return nil, fmt.Errorf("UserID cannot be nil")
+	}
+
+	profiles, err := s.profileRepo.GetRecommendations(userId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get recommendations: %w", err)
+	}
+
+	return profiles, nil
+}

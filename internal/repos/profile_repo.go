@@ -15,6 +15,7 @@ type ProfileRepo interface {
 	Create(profile models.Profile) (*models.Profile, error)
 	GetByUserId(userId uuid.UUID) (*models.Profile, error)
 	Update(profile models.Profile) (*models.Profile, error)
+	GetRecommendations(userId uuid.UUID) ([]models.Profile, error)
 }
 
 type ProfileRepoImpl struct {
@@ -63,4 +64,26 @@ func (r *ProfileRepoImpl) Update(profile models.Profile) (*models.Profile, error
 	}
 
 	return r.GetByUserId(profile.UserID)
+}
+
+func (r *ProfileRepoImpl) GetRecommendations(userId uuid.UUID) ([]models.Profile, error) {
+	ctx := context.Background()
+
+	pipeline := mongo.Pipeline{
+		{{Key: "$match", Value: bson.M{"user_id": bson.M{"$ne": userId}}}},
+		{{Key: "$sample", Value: bson.M{"size": 5}}},
+	}
+
+	cursor, err := r.collection.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var profiles []models.Profile
+	if err := cursor.All(ctx, &profiles); err != nil {
+		return nil, err
+	}
+
+	return profiles, nil
 }
