@@ -1,12 +1,14 @@
 package services
 
 import (
+	"context"
 	"fmt"
 
 	"stakeholder-service/internal/repos"
 	"stakeholder-service/models"
 
 	"github.com/google/uuid"
+	"go.opentelemetry.io/otel"
 )
 
 type ProfileService struct {
@@ -19,7 +21,11 @@ func NewProfileService() *ProfileService {
 	}
 }
 
-func (s *ProfileService) Create(profile models.Profile) (*models.Profile, error) {
+func (s *ProfileService) Create(ctx context.Context, profile models.Profile) (*models.Profile, error) {
+	tracer := otel.Tracer("stakeholders-service")
+	_, span := tracer.Start(ctx, "ProfileService.Create")
+	defer span.End()
+
 	if profile.UserID == uuid.Nil {
 		return nil, fmt.Errorf("UserId cannot be nil")
 	}
@@ -27,6 +33,7 @@ func (s *ProfileService) Create(profile models.Profile) (*models.Profile, error)
 	created_profile, err := s.profileRepo.Create(profile)
 
 	if err != nil {
+		span.RecordError(err)
 		return nil, fmt.Errorf("%s", err.Error())
 	}
 

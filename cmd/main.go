@@ -5,14 +5,21 @@ import (
 	"stakeholder-service/api/routers"
 	"stakeholder-service/utils"
 	logger "stakeholder-service/utils/logging"
+	"stakeholder-service/utils/tracing"
 
 	cld "stakeholder-service/internal/providers/cloudinary"
 
 	log "github.com/sirupsen/logrus"
+	"go.opentelemetry.io/otel"
 )
 
 func main() {
 	logger.Init()
+
+	cleanup := tracing.InitTracer()
+	defer cleanup()
+
+	otel.Tracer("stakeholders-service")
 
 	router := routers.Router()
 
