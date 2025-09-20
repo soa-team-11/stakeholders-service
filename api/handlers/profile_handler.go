@@ -9,6 +9,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/google/uuid"
+	log "github.com/sirupsen/logrus"
+	"go.opentelemetry.io/otel"
 
 	"stakeholder-service/internal/providers/cloudinary"
 	"stakeholder-service/models"
@@ -32,18 +34,29 @@ func Routes() chi.Router {
 }
 
 func HandleUpdate(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	tracer := otel.Tracer("stakeholders-service")
+
+	_, span := tracer.Start(ctx, "HandleUpdate")
+	defer span.End()
+
 	w.Header().Set("Content-Type", "application/json")
 
 	err := r.ParseMultipartForm(10 << 20) // 10MB
 	if err != nil {
+		span.RecordError(err)
 		http.Error(w, fmt.Sprintf(`{"message":"%s"}`, err.Error()), http.StatusBadRequest)
 		return
 	}
 
 	jsonData := r.FormValue("profile")
 	var profile models.Profile
+
+	span.AddEvent("Profile json unmarshal")
 	err = json.Unmarshal([]byte(jsonData), &profile)
+
 	if err != nil {
+		span.RecordError(err)
 		http.Error(w, fmt.Sprintf(`{"message":"%s"}`, err.Error()), http.StatusBadRequest)
 		return
 	}
@@ -52,19 +65,23 @@ func HandleUpdate(w http.ResponseWriter, r *http.Request) {
 	if err == nil {
 		defer file.Close()
 
+		span.AddEvent("Profile image upload")
 		imageURL, err := cloudinary.UploadImage(file)
+
 		if err != nil {
+			span.RecordError(err)
 			http.Error(w, fmt.Sprintf(`{"message":"%s"}`, err.Error()), http.StatusInternalServerError)
 			return
 		}
-		fmt.Printf("Uploaded file: %s\n", header.Filename)
-		fmt.Println(imageURL)
+		log.Infof("Uploaded file: %s\n", header.Filename)
+		log.Info(imageURL)
 
 		profile.ImageURL = imageURL
 	}
 
 	updatedProfile, err := profileService.Update(profile)
 	if err != nil {
+		span.RecordError(err)
 		http.Error(w, fmt.Sprintf(`{"message":"%s"}`, err.Error()), http.StatusBadRequest)
 		return
 	}
@@ -74,29 +91,41 @@ func HandleUpdate(w http.ResponseWriter, r *http.Request) {
 }
 
 func HandleCreate(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	tracer := otel.Tracer("stakeholders-service")
+
+	_, span := tracer.Start(ctx, "HandleCreate")
+	defer span.End()
+
 	w.Header().Set("Content-Type", "application/json")
 
 	b, err := io.ReadAll(r.Body)
 	defer r.Body.Close()
 
 	if err != nil {
+		span.RecordError(err)
 		w.WriteHeader(http.StatusInternalServerError)
+		log.Error(err)
 		fmt.Fprintf(w, `{"message":"%s"}`, err.Error())
 		return
 	}
 
 	var profile models.Profile
+
+	span.AddEvent("Profile json unmarshal")
 	err = json.Unmarshal(b, &profile)
 
 	if err != nil {
+		span.RecordError(err)
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(w, `{"message":"%s"}`, err.Error())
 		return
 	}
 
-	createdProfile, err := profileService.Create(profile)
+	createdProfile, err := profileService.Create(ctx, profile)
 
 	if err != nil {
+		span.RecordError(err)
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(w, `{"message":"%s"}`, err.Error())
 		return
